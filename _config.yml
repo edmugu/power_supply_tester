@@ -1,6 +1,6 @@
-title: Arduino Power Supply
-description: Arduino Power Supply
-baseurl: "/arduino_adjustable_power_supply" # the subpath of your site, e.g. /blog
+title: Power Supply Tester
+description: Power Supply Tester
+baseurl: "/power_supply_tester" # the subpath of your site, e.g. /blog
 url: "https://edmugu.github.io" # the base hostname & protocol for your site, e.g. http://example.com
 remote_theme: pmarsceill/just-the-docs
 
@@ -10,7 +10,7 @@ remote_theme: pmarsceill/just-the-docs
 # Aux links for the upper right navigation
 aux_links:
   "Link to GitHub":
-    - "//github.com/edmugu/arduino_adjustable_power_supply"
+    - "//github.com/edmugu/power_supply_tester"
 
 # Makes Aux links open in a new tab. Default is false
 aux_links_new_tab: false
