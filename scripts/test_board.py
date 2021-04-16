@@ -14,4 +14,6 @@ def test_board():
 
 
 def test_print():
+    b = Board()
+    b.print()
     assert True
