@@ -24,4 +24,12 @@ class Board(object):
     It controls the power supply tester board
     """
 
-	
+    def __init__(self):
+        return
+
+    def print(self):
+        """
+        print board
+        """
+        print("test")
+
