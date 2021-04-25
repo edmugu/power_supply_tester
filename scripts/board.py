@@ -10,20 +10,20 @@ is set by two voltage set by the arduino "coarse voltage" and "fine voltage."
 
            
                                              ▲  Power supply to Test
-                                             │     Max voltage 40V
+                                             │    Max voltage 40V
                                      ┌───────┤
    Vset   ┌────────────────┐         │       │
     ▲     │            Vcc ├─────────┘   │ ┌─┘
-    │     │  x10 Gain Amp  │             │ │      Power Transistor Gate
+    │     │  x10 Gain Amp  │             │ │    Power Transistor Gate
     └─────┤Input     Output├─────────────┤ │      
           │  __            │  0 to 40 V  │ └─┐
           └────────────────┘  Vgate      │   │
                                              │
                                              │
                                             ┌┴┐
-                                            │ │  Power Resistor
-                                            │ │  Resistance ~10 ohm
-                                            └┬┘  Power up to 2 Watts
+                                            │ │ Power Resistor
+                                            │ │ Resistance ~10 ohm
+                                            └┬┘ Power up to 2 Watts
                                              │
                                              ▼
 
