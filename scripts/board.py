@@ -60,22 +60,27 @@ REQUIREMENTS:
 @author: Eduardo Munoz
 @email: edmugu@protonmail.com
 """
-import pyfirmata
+from pymata4 import pymata4
 import fire
 import time
 
 
 class Board(object):
     """
-    It controls the power supply tester board
+    It controls the power-supply-tester board.
     """
 
-    def __init__(self):
-        return
+    def __init__(self, pin_vcoarse, pin_vfine, amp_gain, resistance, vthresh):
+        self.board = pymata4.Pymata4()
+
+        self.pin_vcoarse = self.board.set_pin_mode_pwm_output(pin_vcoarse)
+        self.pin_vfine = self.board.set_pin_mode_pwm_output(pin_vfine)
+        self.amp_gain = amp_gain
+        self.resistance = resistance
+        self.vthresh = vthresh
 
     def print(self):
         """
         print board
         """
         print("test")
-
