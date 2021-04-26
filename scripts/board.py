@@ -6,16 +6,16 @@ The main component of the tester is the power transistor that will control
 the current/power drawn from the power supply to be tested. This current
 is controlled by the voltage at the gate of the transistor. And that voltage 
 is set by the arduino pwm output
-
-                                             ▲ Power supply to Test
+                                             ▲         Vin
+                                             │  Power supply to Test
                                              │    Max voltage 40V
                                      ┌───────┤
    Vset   ┌────────────────┐         │       │
     ▲     │            Vcc ├─────────┘   │ ┌─┘
     │     │  x10 Gain Amp  │             │ │    Power Transistor Gate
-    └─────┤Input     Output├─────────────┤ │      
-          │                │  0 to 40 V  │ └─┐
-          └────────────────┘  Vgate      │   │   ▲  Vload
+    └─────┤Input     Output├─────────────┤ │
+          │                │  0 to 40 V  │ │
+          └────────────────┘  Vgate      │ └─┐   ▲  Vload
                                              │   │
                                              │───┘
                                             ┌┴┐
@@ -27,12 +27,15 @@ is set by the arduino pwm output
 
 Arduino                               Vset
 ────────┐        ┌────────────┐         ▲
-        │        │            │         │
-PWM     ├>──────>┤   Low-Pass ├>────────┘
-Voltage │        │    Filter  │
-        │        │            │
+PWM     ├>──────>┤  Low-Pass  ├>────────┘
+Voltage │        │   Filter   │
         │        └────────────┘
         │
+        │        ┌────────────┐   ▲  Vin
+Vin     │        │   x0.1     │   │
+sense   │<──────<┤  Voltage   ├<──┘
+        │        │  Divider   │
+        │        └────────────┘
         │
         │        ┌────────────┐   ▲  Vload
 Vload   │        │   x0.1     │   │
@@ -67,6 +70,7 @@ class Board(object):
         port="COM4",
         pin_vset=3,
         pin_vload=0,
+        pin_vin=1,
         amp_gain=10,
         resistance=10,
         vthresh=0.5,
@@ -75,6 +79,7 @@ class Board(object):
 
         self.pin_vset = pin_vset
         self.pin_vload = pin_vload
+        self.pin_vin = pin_vin
         self.amp_gain = amp_gain
         self.resistance = resistance
         self.vthresh = vthresh
@@ -91,6 +96,16 @@ class Board(object):
         time.sleep(0.1)
         value = self.board.analog_read(self.pin_vload)
         value = self.board.analog_read(self.pin_vload)
+        value = self.value_to_voltage * value[0]  # throw timestap away
+        return value
+
+    def read_vin(self):
+        """
+        It reads the voltage on the load
+        """
+        time.sleep(0.1)
+        value = self.board.analog_read(self.pin_vin)
+        value = self.board.analog_read(self.pin_vin)
         value = self.value_to_voltage * value[0]  # throw timestap away
         return value
 
@@ -126,6 +141,19 @@ class Board(object):
         voltage_to_set = current * self.resistance
         self.set_vload(voltage_to_set)
 
+    def test_resistance(self, resistance):
+        """
+        It sets a resistance to test a power supply
+
+        :param current: current in amps
+        """
+        if resistance <= self.resistance:
+            raise ValueError("The resistance is too low!!!")
+
+        vin = self.read_vin()
+        current = vin / resistance
+        voltage_to_set = current * self.resistance
+        self.set_vload(voltage_to_set)
 
     def print(self):
         """
