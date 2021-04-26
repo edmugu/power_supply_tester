@@ -82,7 +82,7 @@ class Board(object):
         self.board.enable_analog_reporting(pin_vload)
         self.board.set_pin_mode_pwm_output(pin_vset)
         self.pin_voltage_value = 0  # this value is from 0 to 0x4000
-        self.value_to_voltage = 5.2 / 1024
+        self.value_to_voltage = (5.2 / 1024) / 10.0
 
     def read_vload(self):
         """
@@ -116,6 +116,16 @@ class Board(object):
             if verbose:
                 for _ in range(3):
                     print("Voltage read: %5.3f" % value)
+
+    def test_current(self, current):
+        """
+        It sets a current to test a power supply
+
+        :param current: current in amps
+        """
+        voltage_to_set = current * self.resistance
+        self.set_vload(voltage_to_set)
+
 
     def print(self):
         """
