@@ -95,7 +95,7 @@ class Board(object):
         """
         It reads the voltage on a pin multiple times because sometimes firmata returns 0 or none
         """
-        if times_to_read <=0 or wait_time_between_reads <= 0:
+        if times_to_read <= 0 or wait_time_between_reads <= 0:
             raise ValueError("Bad arguments")
 
         measurements = []
@@ -105,9 +105,8 @@ class Board(object):
             if value is None:
                 value = 0
             measurements.append(value)
-        
-        return median(measurements)
 
+        return median(measurements)
 
     def read_vload(self):
         """
@@ -164,7 +163,9 @@ class Board(object):
         :param current: current in amps
         """
         if resistance <= self.resistance:
-            raise ValueError("The resistance is too low! It should be higher than Rload!")
+            raise ValueError(
+                "The resistance is too low! It should be higher than Rload!"
+            )
 
         vin = self.read_vin()
         current_to_set = vin / resistance
