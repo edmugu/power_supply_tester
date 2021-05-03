@@ -3,9 +3,10 @@
 Controls the power supply tester board.
 
 The main component of the tester is the power transistor that will control
-the current/power drawn from the power supply to be tested. This current
-is controlled by the voltage at the gate of the transistor. And that voltage 
-is set by the arduino pwm output
+the current/power drawn from the power supply to be tested. Its current
+is controlled by the voltage difference between the gate and the load.
+And that voltage is indirectly controlled by the arduino pwm output.
+
                                              ▲         Vin
                                              │  Power supply to Test
                                              │    Max voltage 40V
@@ -14,7 +15,7 @@ is set by the arduino pwm output
     ▲     │            Vcc ├─────────┘   │ ┌─┘
     │     │  x10 Gain Amp  │             │ │    Power Transistor Gate
     └─────┤Input     Output├─────────────┤ │
-          │                │  0 to 40 V  │ │
+          │                │  0 to Vin   │ │
           └────────────────┘  Vgate      │ └─┐   ▲  Vload
                                              │   │
                                              │───┘
@@ -56,6 +57,7 @@ REQUIREMENTS:
 @email: edmugu@protonmail.com
 """
 from pymata4 import pymata4
+from statistics import median
 import fire
 import time
 
@@ -89,24 +91,38 @@ class Board(object):
         self.pin_voltage_value = 0  # this value is from 0 to 0x4000
         self.value_to_voltage = (5.2 / 1024) / 10.0
 
+    def read_pin_voltage(self, pin, times_to_read=3, wait_time_between_reads=0.01):
+        """
+        It reads the voltage on a pin multiple times because sometimes firmata returns 0 or none
+        """
+        if times_to_read <=0 or wait_time_between_reads <= 0:
+            raise ValueError("Bad arguments")
+
+        measurements = []
+        for _ in times_to_read:
+            time.sleep(wait_time_between_reads)
+            value = self.board.analog_read(pin)
+            if value is None:
+                value = 0
+            measurements.append(value)
+        
+        return median(measurements)
+
+
     def read_vload(self):
         """
         It reads the voltage on the load
         """
-        time.sleep(0.1)
-        value = self.board.analog_read(self.pin_vload)
-        value = self.board.analog_read(self.pin_vload)
-        value = self.value_to_voltage * value[0]  # throw timestap away
+        value = self.read_pin_voltage(self.pin_vload)
+        value = self.value_to_voltage * value[0]  # throw timestamp away
         return value
 
     def read_vin(self):
         """
-        It reads the voltage on the load
+        It reads the voltage on the Power Supply Tested
         """
-        time.sleep(0.1)
-        value = self.board.analog_read(self.pin_vin)
-        value = self.board.analog_read(self.pin_vin)
-        value = self.value_to_voltage * value[0]  # throw timestap away
+        value = self.read_pin_voltage(self.pin_vin)
+        value = self.value_to_voltage * value[0]  # throw timestamp away
         return value
 
     def set_vload(self, voltage, verbose=True):
@@ -148,11 +164,11 @@ class Board(object):
         :param current: current in amps
         """
         if resistance <= self.resistance:
-            raise ValueError("The resistance is too low!!!")
+            raise ValueError("The resistance is too low! It should be higher than Rload!")
 
         vin = self.read_vin()
-        current = vin / resistance
-        voltage_to_set = current * self.resistance
+        current_to_set = vin / resistance
+        voltage_to_set = current_to_set * self.resistance
         self.set_vload(voltage_to_set)
 
     def print(self):
