@@ -1,5 +1,7 @@
 data/*
 scripts/.idea/*
+scripts/.idea/misc.xml
+scripts/.idea/scripts.iml
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
