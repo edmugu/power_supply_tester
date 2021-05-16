@@ -56,10 +56,11 @@ REQUIREMENTS:
 @author: Eduardo Munoz
 @email: edmugu@protonmail.com
 """
-#from pymata4 import pymata4
+# from pymata4 import pymata4
 from pyfirmata import Arduino, util
 from statistics import median
-#from my_pid import PID
+
+# from my_pid import PID
 from simple_pid import PID
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -82,7 +83,7 @@ class Board(object):
         sense_voltage_divider=1,
         resistance=10,
     ):
-        #self.board = pymata4.Pymata4()
+        # self.board = pymata4.Pymata4()
         self.board = Arduino(port)
         self.board.digital[13].write(1)
 
@@ -91,7 +92,7 @@ class Board(object):
         self.pin_vin = pin_vin
         self.amp_gain = amp_gain
         self.resistance = resistance
-        self.sense_voltage_divider= sense_voltage_divider
+        self.sense_voltage_divider = sense_voltage_divider
 
         self.pin_voltage_value = 0  # this value is from 0 to 0x4000
         self.value_to_voltage = 5.2 * self.sense_voltage_divider
@@ -105,7 +106,6 @@ class Board(object):
         self.board.analog[pin_vin].enable_reporting()
         self.board.analog[pin_vload].enable_reporting()
         self.vout = self.board.get_pin("d:5:p")
-
 
     def read_voltages(self, times_to_read=5, wait_time_between_reads=0.001):
         """
@@ -159,7 +159,7 @@ class Board(object):
 
         tries_count = 0
         time_history = []
-        while (tries_count < max_tries):
+        while tries_count < max_tries:
             tries_count += 1
             self.read_voltages()
             vload = self.voltages["vload"]
@@ -181,8 +181,10 @@ class Board(object):
         """
         df = pd.DataFrame(self.voltages_history)
         print(df)
-        df.to_csv("../data/%s_PID_%s_setpoint_%s.csv" % (str(int(time.time())), str(pid.tunings), str(pid.setpoint)))
-
+        df.to_csv(
+            "../data/%s_PID_%s_setpoint_%s.csv"
+            % (str(int(time.time())), str(pid.tunings), str(pid.setpoint))
+        )
 
     def test_launcher(self, lambda_test, test_time):
         """
@@ -208,7 +210,7 @@ class Board(object):
 
         self.test_launcher(lambda_test, test_time)
 
-    def test_resistance(self, resistance, test_time = 9):
+    def test_resistance(self, resistance, test_time=9):
         """
         It sets a resistance to test a power supply
 
