@@ -63,6 +63,7 @@ from statistics import median
 # from my_pid import PID
 from simple_pid import PID
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import fire
 import time
@@ -82,6 +83,8 @@ class Board(object):
         amp_gain=10,
         sense_voltage_divider=1,
         resistance=10,
+        gate_thresh=0.48,  # the gate threshold of the MOSFET
+        vcc=5,
     ):
         # self.board = pymata4.Pymata4()
         self.board = Arduino(port)
@@ -90,6 +93,8 @@ class Board(object):
         self.pin_vset = pin_vset
         self.pin_vload = pin_vload
         self.pin_vin = pin_vin
+        self.vcc = vcc
+        self.gate_thresh = 0.48
         self.amp_gain = amp_gain
         self.resistance = resistance
         self.sense_voltage_divider = sense_voltage_divider
@@ -106,6 +111,8 @@ class Board(object):
         self.board.analog[pin_vin].enable_reporting()
         self.board.analog[pin_vload].enable_reporting()
         self.vout = self.board.get_pin("d:5:p")
+
+        self.pid = PID(0.0, 0.0, 0.0, 0)
 
     def read_voltages(self, times_to_read=5, wait_time_between_reads=0.001):
         """
@@ -143,7 +150,7 @@ class Board(object):
         """
         return time.time() - self.time_created
 
-    def set_vload(self, voltage, max_tries=100, time_per_try=0.001, verbose=True):
+    def set_vload(self, voltage, max_tries=10, time_per_try=0.001, verbose=False):
         """
         It sets the voltage on the power resistor. It does that with the help of a PID
 
@@ -155,7 +162,16 @@ class Board(object):
         if verbose:
             print("Setting voltage to %5.3f volts." % voltage)
 
-        pid = PID(0.00, 0.4, 0.0, voltage)
+        # ziegler-Nichols tunning
+        ku = 0.2
+        tu = 0.33
+        kp = 0.6 * ku
+        ki = 1.2 * ku / tu
+        kd = 3 * ku * tu / 40
+
+        # self.pid = PID(kp, ki, kd, voltage)
+        self.pid = PID(0.05, 0.3, 0.00, voltage)
+        self.pid.output_limits = (0, 1 - self.gate_thresh)
 
         tries_count = 0
         time_history = []
@@ -164,7 +180,8 @@ class Board(object):
             self.read_voltages()
             vload = self.voltages["vload"]
             time_history.append(self.time())
-            output = pid(vload)
+            output = self.pid(vload)
+            output += self.gate_thresh
             self.vout.write(output)
 
             if verbose:
@@ -172,28 +189,21 @@ class Board(object):
                 print("time: %5.3f" % self.time())
                 print("pid output: %5.3f" % output)
                 print(str(self.voltages))
+        if verbose:
+            self.save_data()
 
-        self.save_data()
-
-    def save_data(self):
+    def save_data(self, name=None):
         """
         It saves the voltages recorded through the whole process
         """
+        if name is None:
+            tmp = (str(int(time.time())), str(self.pid.tunings), str(self.pid.setpoint))
+            name = "../data/%s_PID_%s_setpoint_%s.csv" % tmp
         df = pd.DataFrame(self.voltages_history)
         print(df)
-        df.to_csv(
-            "../data/%s_PID_%s_setpoint_%s.csv"
-            % (str(int(time.time())), str(pid.tunings), str(pid.setpoint))
-        )
+        df.to_csv(name)
 
-    def test_launcher(self, lambda_test, test_time):
-        """
-        It logs the voltages of the system and executes lambda_test.
-        :param lambda_test: This function is called to set gate voltage
-        :param test_time:   The test time in seconds
-        """
-
-    def test_current(self, current, test_time=9):
+    def set_current(self, current, verbose=True):
         """
         It sets a current to test a power supply
 
@@ -201,36 +211,51 @@ class Board(object):
         :param test_time:   test_time in seconds
         """
         voltage_to_set = current * self.resistance
+        print("setting the following voltage: " + str(voltage_to_set))
+        self.set_vload(voltage_to_set)
+        vload = self.voltages["vload"]
+        tmp = (vload, vload / self.resistance)
+        print("voltage set: %5.3f  current set: %5.3f" % tmp)
 
-        def lambda_test(vin, vload):
-            """
-            Dummy test for the test_launcher
-            """
-            self.set_vload(voltage_to_set)
+    def search_current_limit(self, iend, istart=0.001, isteps=100):
+        """
+        It tries different currents
+        """
+        print("doing a current limit search")
+        points = np.linspace(istart, iend, num=isteps)
 
-        self.test_launcher(lambda_test, test_time)
+        data = []
+        for i, s in enumerate(points):
+            print("i: %d:  step: %5.3f" % (i, s))
+            self.set_current(s, verbose=False)
+            datav = {}
+            datav["i"] = i
+            datav["vin"] = self.voltages["vin"]
+            datav["vload"] = self.voltages["vload"]
+            datav["current"] = self.voltages["vload"] / self.resistance
+            data.append(datav)
 
-    def test_resistance(self, resistance, test_time=9):
+        df = pd.DataFrame(data)
+        print(df)
+        df.to_csv("../data/test3.csv")
+
+    def test_resistance(self, resistance, test_time=9, verbose=True):
         """
         It sets a resistance to test a power supply
 
         :param current: current in amps
         :param test_time:   test_time in seconds
         """
+        s = "The resistance is too low! It should be higher than Rload!"
         if resistance <= self.resistance:
-            raise ValueError(
-                "The resistance is too low! It should be higher than Rload!"
-            )
+            raise ValueError(s)
 
-        def lambda_test(vin, vload):
-            """
-            Dummy test for the test_launcher
-            """
-            current_to_set = vin / resistance
+        tstart = time.time()
+        while (time.time() - tstart) < test_time:
+            current_to_set = self.voltages["vin"] / resistance
             voltage_to_set = current_to_set * self.resistance
             self.set_vload(voltage_to_set)
-
-        self.test_launcher(lambda_test, test_time)
+        self.save_data()
 
     def print(self):
         """
